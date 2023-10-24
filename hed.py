@@ -1,8 +1,9 @@
 import cv2
-import csv
+import seaborn as sns
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.metrics import precision_score, recall_score, f1_score
+from scipy.ndimage import distance_transform_edt
+from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
 from noise import gauss, sp, impulse
 
 def edgeDetection(img):
@@ -35,11 +36,24 @@ def perfomance(edge_img):
 
     return recall, precision,f1
 
+def fom (edge_img, edge_gold):
+    alpha = 1.0/9
+    dist = distance_transform_edt(np.invert(edge_gold))
+    fom = 1.0/np.maximum(np.count_nonzero(edge_img), np.count_nonzero(edge_gold))
+    N,M = edge_img.shape
+
+    for i in range(0, N):
+        for j in range (0, M):
+            if edge_img[i,j]:
+                fom += 1.0/(1.0+dist[i,j]*dist[i,j]*alpha)
+    fom /= np.maximum(np.count_nonzero(edge_img), np.count_nonzero(edge_gold))
+    
+    return fom
 
 #init
 file_name = "results.csv"
 
-img = cv2.imread('images/image.jpg')
+img = cv2.imread('images/image.png')
 ground_truth = edgeDetection(img)
 
 stock_edge = [[img, "Stock image", " "], 
@@ -54,7 +68,7 @@ pepper_probability = 0.30
 sp_noice = sp(img, salt_probability, pepper_probability)
 
 #impulse noise
-impulse_probability = 0.01
+impulse_probability = 0.1
 impulse_noice = impulse(img, impulse_probability)
 
 #noised images edge detection
@@ -73,21 +87,22 @@ noiced_edge = [[gauss_noice,'Gaussian Noise, standart deviatin = ', 75],
                [spEdge, 'Edge detection, F1 = ', sp_result[2]], 
                [impulseEdge, 'Edge detection, F1 = ', impulse_result[2]]]
 
-plot(stock_edge,1,2)
+# # plot(stock_edge,1,2)
 plot(noiced_edge,2,3)
 
+print(f'\n\nFOM (impulse noice): {fom(impulseEdge, impulseEdge)}\n\n')
 
-print('\nGaussian noiced image edge detection:')
-print(f'Precision: {gauss_result[0]}')
-print(f'Recall: {gauss_result[1]}')
-print(f'F1 score: {gauss_result[2]}')
+# print('\nGaussian noiced image edge detection:')
+# print(f'Precision: {gauss_result[0]}')
+# print(f'Recall: {gauss_result[1]}')
+# print(f'F1 score: {gauss_result[2]}')
 
-print('\nGaussian noiced image edge detection:')
-print(f'Precision: {sp_result[0]}')
-print(f'Recall: {sp_result[1]}')
-print(f'F1 score: {sp_result[2]}')
+# print('\nGaussian noiced image edge detection:')
+# print(f'Precision: {sp_result[0]}')
+# print(f'Recall: {sp_result[1]}')
+# print(f'F1 score: {sp_result[2]}')
 
-print('\nGaussian noiced image edge detection:')
-print(f'Precision: {impulse_result[0]}')
-print(f'Recall: {impulse_result[1]}')
-print(f'F1 score: {impulse_result[2]}')
+# print('\nGaussian noiced image edge detection:')
+# print(f'Precision: {impulse_result[0]}')
+# print(f'Recall: {impulse_result[1]}')
+# print(f'F1 score: {impulse_result[2]}')
